@@ -94,7 +94,7 @@ public class ImapSession implements Runnable {
             return;
         }
 
-        ImapMailboxReader reader = new ImapMailboxReader(username);
+        MailboxReader reader = new MailboxReader(username);
         int messageCount = reader.getMessageCount();
 
         out.println("* " + messageCount + " EXISTS");
@@ -108,7 +108,7 @@ public class ImapSession implements Runnable {
             return;
         }
 
-        ImapMailboxReader reader = new ImapMailboxReader(username);
+        MailboxReader reader = new MailboxReader(username);
         List<String> messages = reader.getMessages();
 
         for (int i = 0; i < messages.size(); i++) {
@@ -134,4 +134,4 @@ public class ImapSession implements Runnable {
             System.out.println("IMAP 연결 종료 중 오류: " + e.getMessage());
         }
     }
-} 
+}

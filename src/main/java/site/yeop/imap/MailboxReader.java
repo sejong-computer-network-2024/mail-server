@@ -5,11 +5,11 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ImapMailboxReader {
+public class MailboxReader {
     private static final String MAIL_STORAGE_PATH = "mailbox/";
     private final String userMailbox;
 
-    public ImapMailboxReader(String username) {
+    public MailboxReader(String username) {
         this.userMailbox = MAIL_STORAGE_PATH + username.replace("@", "_at_") + "/";
     }
 
@@ -22,7 +22,7 @@ public class ImapMailboxReader {
     public List<String> getMessages() {
         List<String> messages = new ArrayList<>();
         File mailboxDir = new File(userMailbox);
-        
+
         if (!mailboxDir.exists()) {
             return messages;
         }
@@ -41,4 +41,4 @@ public class ImapMailboxReader {
 
         return messages;
     }
-} 
+}
