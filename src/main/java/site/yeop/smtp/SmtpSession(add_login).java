@@ -12,7 +12,7 @@ public class SmtpSession implements Runnable {
     }
 
     public class IdPasswordManager{
-        private static final String IdPassword_FILE_PATH = "IdPassword.txt";
+        private static final String IdPassword_FILE_PATH = "IdPassword.txt";//저장경로 수정 필요?
 
         public boolean checkvalue(String encodedUserId, String encodedPassword) {
             String userId = new String(Base64.getDecoder().decode(encodedUserId));
@@ -60,9 +60,9 @@ public class SmtpSession implements Runnable {
                     if (line.toUpperCase().startsWith("HELO") || line.toUpperCase().startsWith("EHLO")) {
                         clientOut.println("250 Hello");
                     }else if (line.toUpperCase().equals("AUTH LOGIN")){
-                        clientOut.println("334 UserId:");//base64로 인코딩된 334 UserID: 전송
-                        String encodeUsername = clientIn.readLine();//Username입력받기
-                        clientOut.println("334 Password:");//base64로 인코딩된 334 Password: 전송
+                        clientOut.println("334 UserId:");
+                        String encodeUsername = clientIn.readLine();
+                        clientOut.println("334 Password:");
                         String encodePassword = clientIn.readLine();
 
                         //입력된 id와 password가 일치하는지 확인 필요
