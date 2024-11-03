@@ -1,15 +1,10 @@
 package site.yeop;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.util.Scanner;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.util.UUID;
 
 import org.xbill.DNS.Lookup;
@@ -22,6 +17,7 @@ public class MailServer {
     private static final int LOCAL_SMTP_PORT = 25; // 로컬 SMTP 서버 포트
     private static final int CONNECTION_TIMEOUT = 5000;
     private static final int SOCKET_TIMEOUT = 10000;
+    private static final String MAIL_STORAGE_PATH = "mailbox/";
 
     public static void main(String[] args) {
         // SMTP 서버 시작
@@ -77,19 +73,28 @@ public class MailServer {
                 } else {
                     if (line.equals(".")) {
                         inDataMode = false;
-                        // 외부 메일 서버로 전달
-                        String smtpServer = getSmtpServer(recipientEmail);
-                        if (smtpServer != null) {
-                            boolean sent = sendMail(smtpServer, SMTP_PORT, senderEmail, recipientEmail, 
-                                                 extractSubject(messageContent.toString()), 
-                                                 extractBody(messageContent.toString()));
-                            if (sent) {
-                                clientOut.println("250 Message accepted for delivery");
-                            } else {
-                                clientOut.println("554 Transaction failed");
-                            }
+                        // 수신된 메일이 우리 도메인으로 온 것인지 확인
+                        if (isLocalDomain(recipientEmail)) {
+                            // 로컬 메일박스에 저장
+                            saveMailToFile(recipientEmail, senderEmail, 
+                                extractSubject(messageContent.toString()),
+                                extractBody(messageContent.toString()));
+                            clientOut.println("250 Message accepted for delivery");
                         } else {
-                            clientOut.println("554 No valid mail server found");
+                            // 외부 도메인일 경우 기존 코드 실행
+                            String smtpServer = getSmtpServer(recipientEmail);
+                            if (smtpServer != null) {
+                                boolean sent = sendMail(smtpServer, SMTP_PORT, senderEmail, recipientEmail, 
+                                                     extractSubject(messageContent.toString()), 
+                                                     extractBody(messageContent.toString()));
+                                if (sent) {
+                                    clientOut.println("250 Message accepted for delivery");
+                                } else {
+                                    clientOut.println("554 Transaction failed");
+                                }
+                            } else {
+                                clientOut.println("554 No valid mail server found");
+                            }
                         }
                         messageContent = new StringBuilder();
                     } else {
@@ -235,5 +240,41 @@ public class MailServer {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private static void saveMailToFile(String recipient, String sender, String subject, String content) {
+        try {
+            // 수신자의 메일박스 디렉토리 생성
+            String userMailbox = MAIL_STORAGE_PATH + recipient.replace("@", "_at_") + "/";
+            File mailboxDir = new File(userMailbox);
+            if (!mailboxDir.exists()) {
+                mailboxDir.mkdirs();
+            }
+
+            // 현재 시간과 UUID를 조합하여 고유한 파일명 생성
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String fileName = timestamp + "_" + UUID.randomUUID().toString() + ".eml";
+
+            // 메일 내용을 파일로 저장
+            File mailFile = new File(userMailbox + fileName);
+            try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+                    new FileOutputStream(mailFile), StandardCharsets.UTF_8))) {
+                writer.println("From: " + sender);
+                writer.println("To: " + recipient);
+                writer.println("Subject: " + subject);
+                writer.println("Date: " + new Date());
+                writer.println("Content-Type: text/plain; charset=UTF-8");
+                writer.println();
+                writer.println(content);
+            }
+            
+            System.out.println("메일이 성공적으로 저장되었습니다: " + mailFile.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("메일 저장 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    private static boolean isLocalDomain(String email) {
+        return email.toLowerCase().endsWith("@yeop.site");
     }
 }
