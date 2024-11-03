@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.Scanner;
@@ -18,34 +19,121 @@ import org.xbill.DNS.Type;
 
 public class MailServer {
     private static final int SMTP_PORT = 25;
+    private static final int LOCAL_SMTP_PORT = 25; // 로컬 SMTP 서버 포트
     private static final int CONNECTION_TIMEOUT = 5000;
     private static final int SOCKET_TIMEOUT = 10000;
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("송신자 이메일 주소를 입력하세요: ");
-        String senderEmail = scanner.nextLine();
-        System.out.print("수신자 이메일 주소를 입력하세요: ");
-        String recipientEmail = scanner.nextLine();
-        System.out.print("메일 제목을 입력하세요: ");
-        String subject = scanner.nextLine();
-        System.out.print("메일 내용을 입력하세요: ");
-        String content = scanner.nextLine();
+        // SMTP 서버 시작
+        startSmtpServer();
+    }
 
-        String smtpServer = getSmtpServer(recipientEmail);
-        if (smtpServer == null) {
-            System.out.println("메일 서버를 찾을 수 없습니다.");
-            return;
-        }
-
-        try {
-            boolean sent = sendMail(smtpServer, SMTP_PORT, senderEmail, recipientEmail, subject, content);
-            if (!sent) {
-                System.out.println("메일 전송에 실패했습니다.");
+    private static void startSmtpServer() {
+        try (ServerSocket serverSocket = new ServerSocket(LOCAL_SMTP_PORT)) {
+            System.out.println("SMTP 서버가 포트 " + LOCAL_SMTP_PORT + "에서 시작되었습니다.");
+            
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(() -> handleClient(clientSocket)).start();
             }
-        } catch (Exception e) {
-            System.out.println("메일 전송 중 오류 발생: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("서버 시작 실패: " + e.getMessage());
         }
+    }
+
+    private static void handleClient(Socket clientSocket) {
+        try {
+            BufferedReader clientIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter clientOut = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true);
+
+            // 연결 성공 메시지 전송
+            clientOut.println("220 yeop.site SMTP Server Ready");
+
+            String senderEmail = null;
+            String recipientEmail = null;
+            StringBuilder messageContent = new StringBuilder();
+            String line;
+            boolean inDataMode = false;
+
+            while ((line = clientIn.readLine()) != null) {
+                System.out.println("클라이언트로부터 수신: " + line);
+
+                if (!inDataMode) {
+                    if (line.toUpperCase().startsWith("HELO") || line.toUpperCase().startsWith("EHLO")) {
+                        clientOut.println("250 Hello");
+                    } else if (line.toUpperCase().startsWith("MAIL FROM:")) {
+                        senderEmail = extractEmail(line);
+                        clientOut.println("250 Sender OK");
+                    } else if (line.toUpperCase().startsWith("RCPT TO:")) {
+                        recipientEmail = extractEmail(line);
+                        clientOut.println("250 Recipient OK");
+                    } else if (line.toUpperCase().equals("DATA")) {
+                        clientOut.println("354 Start mail input; end with <CRLF>.<CRLF>");
+                        inDataMode = true;
+                    } else if (line.toUpperCase().equals("QUIT")) {
+                        clientOut.println("221 Bye");
+                        break;
+                    }
+                } else {
+                    if (line.equals(".")) {
+                        inDataMode = false;
+                        // 외부 메일 서버로 전달
+                        String smtpServer = getSmtpServer(recipientEmail);
+                        if (smtpServer != null) {
+                            boolean sent = sendMail(smtpServer, SMTP_PORT, senderEmail, recipientEmail, 
+                                                 extractSubject(messageContent.toString()), 
+                                                 extractBody(messageContent.toString()));
+                            if (sent) {
+                                clientOut.println("250 Message accepted for delivery");
+                            } else {
+                                clientOut.println("554 Transaction failed");
+                            }
+                        } else {
+                            clientOut.println("554 No valid mail server found");
+                        }
+                        messageContent = new StringBuilder();
+                    } else {
+                        messageContent.append(line).append("\r\n");
+                    }
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println("클라이언트 처리 중 오류: " + e.getMessage());
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                System.out.println("클라이언트 소켓 닫기 실패: " + e.getMessage());
+            }
+        }
+    }
+
+    private static String extractEmail(String line) {
+        int start = line.indexOf('<');
+        int end = line.indexOf('>');
+        if (start != -1 && end != -1) {
+            return line.substring(start + 1, end);
+        }
+        return line.split(":")[1].trim();
+    }
+
+    private static String extractSubject(String message) {
+        String[] lines = message.split("\r\n");
+        for (String line : lines) {
+            if (line.toLowerCase().startsWith("subject:")) {
+                return line.substring(8).trim();
+            }
+        }
+        return "";
+    }
+
+    private static String extractBody(String message) {
+        int emptyLineIndex = message.indexOf("\r\n\r\n");
+        if (emptyLineIndex != -1) {
+            return message.substring(emptyLineIndex + 4);
+        }
+        return message;
     }
 
     private static boolean sendMail(String server, int port, String from, String to, String subject, String content) {
