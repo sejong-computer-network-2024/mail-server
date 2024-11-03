@@ -2,6 +2,7 @@ package site.yeop.imap;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.List;
 
 public class ImapSession implements Runnable {
@@ -108,13 +109,71 @@ public class ImapSession implements Runnable {
             return;
         }
 
+        System.out.println("FETCH 명령 처리 시작");
         MailboxReader reader = new MailboxReader(username);
-        List<String> messages = reader.getMessages();
+        
+        // 원래 명령어를 다시 조합
+        String command = String.join(" ", Arrays.copyOfRange(parts, 1, parts.length));
+        System.out.println("전체 명령어: " + command);
 
-        for (int i = 0; i < messages.size(); i++) {
-            out.println("* " + (i + 1) + " FETCH (BODY[] {" + messages.get(i).length() + "}");
-            out.println(messages.get(i));
-            out.println(")");
+        // FETCH 명령어 파싱
+        if (!command.startsWith("FETCH ")) {
+            out.println(tag + " BAD Invalid command");
+            return;
+        }
+
+        // FETCH 다음 부분 파싱
+        command = command.substring(6).trim(); // "FETCH " 제거
+        String sequenceNumber = command.split(" ")[0];
+        String fetchItems = command.substring(sequenceNumber.length()).trim()
+                                  .replaceAll("\\s+", ""); // 모든 공백 제거
+
+        System.out.println("시퀀스 번호: " + sequenceNumber);
+        System.out.println("Fetch 항목: " + fetchItems);
+
+        if (fetchItems.equals("(BODY[HEADER.FIELDS(FROMSUBJECTDATE)])")) {
+            List<MailInfo> mailList = reader.getMailList();
+            System.out.println("가져온 메일 리스트 크기: " + mailList.size());
+
+            if (!sequenceNumber.equals("1:*")) {
+                int index = Integer.parseInt(sequenceNumber) - 1;
+                if (index < mailList.size()) {
+                    MailInfo mail = mailList.get(index);
+                    out.println("* " + sequenceNumber + " FETCH (BODY[HEADER.FIELDS (FROM SUBJECT DATE)] {" + 
+                        (mail.getId().length() + mail.getFrom().length() + mail.getSubject().length() + mail.getDate().length() + 100) + "}");
+                    out.println("ID: " + mail.getId() + "\r\n" +
+                               "From: " + mail.getFrom() + "\r\n" +
+                               "Subject: " + mail.getSubject() + "\r\n" +
+                               "Date: " + mail.getDate() + "\r\n\r\n)");
+                }
+            } else {
+                for (int i = 0; i < mailList.size(); i++) {
+                    MailInfo mail = mailList.get(i);
+                    System.out.println("메일 정보 출력 중: " + (i + 1));
+                    out.println("* " + (i + 1) + " FETCH (BODY[HEADER.FIELDS (FROM SUBJECT DATE)] {" + 
+                        (mail.getId().length() + mail.getFrom().length() + mail.getSubject().length() + mail.getDate().length() + 100) + "}");
+                    out.println("ID: " + mail.getId() + "\r\n" +
+                               "From: " + mail.getFrom() + "\r\n" +
+                               "Subject: " + mail.getSubject() + "\r\n" +
+                               "Date: " + mail.getDate() + "\r\n\r\n)");
+                }
+            }
+        } else if (fetchItems.equals("(BODY[])")) {
+            // 메일 전체 내용 요청
+            List<MailInfo> mailList = reader.getMailList();
+            
+            if (!sequenceNumber.equals("1:*")) {
+                int index = Integer.parseInt(sequenceNumber) - 1;
+                if (index < mailList.size()) {
+                    MailInfo mail = mailList.get(index);
+                    String content = reader.getMailContent(mail.getId());
+                    if (content != null) {
+                        out.println("* " + sequenceNumber + " FETCH (BODY[] {" + content.length() + "}");
+                        out.println(content);
+                        out.println(")");
+                    }
+                }
+            }
         }
 
         out.println(tag + " OK FETCH completed");
