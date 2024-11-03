@@ -12,6 +12,8 @@ import org.xbill.DNS.MXRecord;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
+import site.yeop.imap.ImapServer;
+
 public class MailServer {
     private static final int SMTP_PORT = 25;
     private static final int LOCAL_SMTP_PORT = 25; // 로컬 SMTP 서버 포트
@@ -21,7 +23,11 @@ public class MailServer {
 
     public static void main(String[] args) {
         // SMTP 서버 시작
-        startSmtpServer();
+        new Thread(() -> startSmtpServer()).start();
+        
+        // IMAP 서버 시작
+        ImapServer imapServer = new ImapServer();
+        new Thread(imapServer::start).start();
     }
 
     private static void startSmtpServer() {
