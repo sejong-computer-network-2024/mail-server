@@ -2,6 +2,7 @@ package site.yeop.smtp;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Base64;
 
 public class SmtpSession implements Runnable {
     private final Socket clientSocket;
@@ -10,11 +11,38 @@ public class SmtpSession implements Runnable {
         this.clientSocket = clientSocket;
     }
 
+    public class IdPasswordManager{
+        private static final String IdPassword_FILE_PATH = "IdPassword.txt";
+
+        public boolean checkvalue(String encodedUserId, String encodedPassword) {
+            String userId = new String(Base64.getDecoder().decode(encodedUserId));
+            String password = new String(Base64.getDecoder().decode(encodedPassword));
+
+            try(BufferedReader reader = new BufferedReader(new FileReader(IdPassword_FILE_PATH))){
+                String line;
+                while((line = reader.readLine())!= null){
+                    String[] parts = line.split(":");//txt에 Id:Password\n형식으로 데이터 저장
+                    if(parts.length == 2){
+                        String storedUserId = parts[0].trim();
+                        String storedPassword = parts[1].trim();
+                        if(userId.equals(storedUserId) && password.equals(storedPassword)){
+                            return true;
+                        }
+                    }
+                }
+            }catch(IOException e){
+                System.out.println("Error reading IdPassword file");
+            }
+            return false;
+        }
+    }
+
+
     @Override
     public void run() {
         try (
-            BufferedReader clientIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter clientOut = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true)
+                BufferedReader clientIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter clientOut = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true)
         ) {
             clientOut.println("220 yeop.site SMTP Server Ready");
 
@@ -23,6 +51,7 @@ public class SmtpSession implements Runnable {
             StringBuilder messageContent = new StringBuilder();
             String line;
             boolean inDataMode = false;
+            boolean login = false;
 
             while ((line = clientIn.readLine()) != null) {
                 System.out.println("클라이언트로부터 수신: " + line);
@@ -30,7 +59,26 @@ public class SmtpSession implements Runnable {
                 if (!inDataMode) {
                     if (line.toUpperCase().startsWith("HELO") || line.toUpperCase().startsWith("EHLO")) {
                         clientOut.println("250 Hello");
-                    } else if (line.toUpperCase().startsWith("MAIL FROM:")) {
+                    }else if (line.toUpperCase().equals("AUTH LOGIN")){
+                        clientOut.println("334 UserId:");//base64로 인코딩된 334 UserID: 전송
+                        String encodeUsername = clientIn.readLine();//Username입력받기
+                        clientOut.println("334 Password:");//base64로 인코딩된 334 Password: 전송
+                        String encodePassword = clientIn.readLine();
+
+                        //입력된 id와 password가 일치하는지 확인 필요
+                        IdPasswordManager idPasswordManager = new IdPasswordManager();
+                        if(idPasswordManager.checkvalue(encodeUsername, encodePassword)){
+                            login = true;
+                            clientOut.println("235 Authentication successful");
+                        }
+                        else{
+                            clientOut.println("535 Authentication failed");
+                            continue;
+                        }
+                    }else if(!login){//login이 처리되지 않고 다른 명령어가 수신된 경우
+                        clientOut.println("530 Authentication required");
+                        continue;
+                    }else if (line.toUpperCase().startsWith("MAIL FROM:")) {
                         senderEmail = MailParser.extractEmail(line);
                         clientOut.println("250 Sender OK");
                     } else if (line.toUpperCase().startsWith("RCPT TO:")) {
