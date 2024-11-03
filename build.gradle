@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+group = 'site.yeop'
+version = '1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'dnsjava:dnsjava:3.3.1'
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'site.yeop.MailServer'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
