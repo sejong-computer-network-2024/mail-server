@@ -46,13 +46,14 @@ public class SmtpSession implements Runnable {
                 } else {
                     if (line.equals(".")) {
                         inDataMode = false;
+                        String rawMessage = messageContent.toString();
                         if (MailParser.isLocalDomain(recipientEmail)) {
-                            MailStorage.saveMailToFile(recipientEmail, senderEmail, MailParser.extractSubject(messageContent.toString()), MailParser.extractBody(messageContent.toString()));
+                            MailStorage.saveMailToFile(recipientEmail, senderEmail, rawMessage);
                             clientOut.println("250 Message accepted for delivery");
                         } else {
                             String smtpServer = DnsResolver.getSmtpServer(recipientEmail);
                             if (smtpServer != null) {
-                                boolean sent = MailSender.sendMail(smtpServer, senderEmail, recipientEmail, MailParser.extractSubject(messageContent.toString()), MailParser.extractBody(messageContent.toString()));
+                                boolean sent = MailSender.sendMail(smtpServer, senderEmail, recipientEmail, rawMessage);
                                 clientOut.println(sent ? "250 Message accepted for delivery" : "554 Transaction failed");
                             } else {
                                 clientOut.println("554 No valid mail server found");

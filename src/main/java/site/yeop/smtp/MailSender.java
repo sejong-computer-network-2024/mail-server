@@ -11,7 +11,7 @@ public class MailSender {
     private static final int CONNECTION_TIMEOUT = 5000;
     private static final int SOCKET_TIMEOUT = 10000;
 
-    public static boolean sendMail(String server, String from, String to, String subject, String content) {
+    public static boolean sendMail(String server, String from, String to, String rawMessage) {
         Socket socket = new Socket();
         try {
             socket.connect(new InetSocketAddress(server, SMTP_PORT), CONNECTION_TIMEOUT);
@@ -48,14 +48,7 @@ public class MailSender {
                 throw new IOException("DATA 실패");
             }
 
-            String messageId = UUID.randomUUID().toString() + "@yeop.site";
-            out.print("From: " + from + "\r\n");
-            out.print("To: " + to + "\r\n");
-            out.print("Subject: " + subject + "\r\n");
-            out.print("Message-ID: <" + messageId + ">\r\n");
-            out.print("Content-Type: text/plain; charset=UTF-8\r\n");
-            out.print("\r\n");
-            out.print(content + "\r\n");
+            out.print(rawMessage);
             out.println(".\r\n");
             out.flush();
 

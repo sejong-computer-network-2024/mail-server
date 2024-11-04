@@ -9,7 +9,7 @@ import java.util.UUID;
 public class MailStorage {
     private static final String MAIL_STORAGE_PATH = "mailbox/";
 
-    public static void saveMailToFile(String recipient, String sender, String subject, String content) {
+    public static void saveMailToFile(String recipient, String sender, String rawMessage) {
         try {
             String userMailbox = MAIL_STORAGE_PATH + recipient.replace("@", "_at_") + "/";
             File mailboxDir = new File(userMailbox);
@@ -22,13 +22,7 @@ public class MailStorage {
 
             File mailFile = new File(userMailbox + fileName);
             try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(mailFile), StandardCharsets.UTF_8))) {
-                writer.println("From: " + sender);
-                writer.println("To: " + recipient);
-                writer.println("Subject: " + subject);
-                writer.println("Date: " + new Date());
-                writer.println("Content-Type: text/plain; charset=UTF-8");
-                writer.println();
-                writer.println(content);
+                writer.print(rawMessage);
             }
 
             System.out.println("메일이 성공적으로 저장되었습니다: " + mailFile.getAbsolutePath());
