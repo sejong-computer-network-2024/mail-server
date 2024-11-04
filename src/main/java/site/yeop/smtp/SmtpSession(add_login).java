@@ -17,7 +17,8 @@ public class SmtpSession implements Runnable {
         public boolean checkvalue(String encodedUserId, String encodedPassword) {
             //String userId = new String(Base64.getDecoder().decode(encodedUserId));
             //String password = new String(Base64.getDecoder().decode(encodedPassword));
-
+            //만약 인코딩된 정보를 전달받을 경우 위 버전을 사용해야 함. 테스트에서는 인코딩이 되지 않은채로 전달되었기에 아래처럼 사용함 
+            
             String userId = encodedUserId;
             String password = encodedPassword;
 
