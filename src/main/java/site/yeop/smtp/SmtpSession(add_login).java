@@ -52,6 +52,7 @@ public class SmtpSession implements Runnable {
             String line;
             boolean inDataMode = false;
             boolean login = false;
+            int login_cnt = 0;
 
             while ((line = clientIn.readLine()) != null) {
                 System.out.println("클라이언트로부터 수신: " + line);
@@ -69,10 +70,16 @@ public class SmtpSession implements Runnable {
                         IdPasswordManager idPasswordManager = new IdPasswordManager();
                         if(idPasswordManager.checkvalue(encodeUsername, encodePassword)){
                             login = true;
+                            login_cnt = 0;
                             clientOut.println("235 Authentication successful");
                         }
                         else{
-                            clientOut.println("535 Authentication failed");
+                            clientOut.println("535 Authentication failed. Remaining attempts: "+(5-login_cnt)); //로그인을 시도가능한 회수를 같이 전달
+                            login_cnt++;
+                            if(cnt >= 4){//로그인 시도가 5번을 넘었을 경우 연결을 종료
+                                clientOut.println("421 Too many failed login attempts, closing connection.");
+                                break;
+                            }
                             continue;
                         }
                     }else if(!login){//login이 처리되지 않고 다른 명령어가 수신된 경우
