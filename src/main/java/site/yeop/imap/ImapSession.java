@@ -5,6 +5,8 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
 
+import site.yeop.auth.UserAuth;
+
 public class ImapSession implements Runnable {
     private final Socket clientSocket;
     private final BufferedReader in;
@@ -68,9 +70,14 @@ public class ImapSession implements Runnable {
 
         username = parts[2];
         String password = parts[3];
-        // 실제 환경에서는 적절한 인증 로직 구현 필요
-        authenticated = true;
-        out.println(tag + " OK LOGIN completed");
+        
+        if (UserAuth.authenticate(username, password)) {
+            authenticated = true;
+            out.println(tag + " OK LOGIN completed");
+        } else {
+            out.println(tag + " NO [AUTHENTICATIONFAILED] Invalid credentials");
+            authenticated = false;
+        }
     }
 
     private void handleList(String tag) {
@@ -130,7 +137,7 @@ public class ImapSession implements Runnable {
 
         System.out.println("시퀀스 번호: " + sequenceNumber);
         System.out.println("Fetch 항목: " + fetchItems);
-
+        
         if (fetchItems.equals("(BODY[HEADER.FIELDS(FROMSUBJECTDATE)])")) {
             List<MailInfo> mailList = reader.getMailList();
             System.out.println("가져온 메일 리스트 크기: " + mailList.size());
