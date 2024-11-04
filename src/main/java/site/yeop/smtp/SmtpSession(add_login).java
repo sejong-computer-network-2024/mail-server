@@ -74,12 +74,12 @@ public class SmtpSession implements Runnable {
                             clientOut.println("235 Authentication successful");
                         }
                         else{
-                            clientOut.println("535 Authentication failed. Remaining attempts: "+(5-login_cnt)); //로그인을 시도가능한 회수를 같이 전달
                             login_cnt++;
-                            if(cnt >= 4){//로그인 시도가 5번을 넘었을 경우 연결을 종료
+                            if(login_cnt >= 4){//로그인 시도가 5번을 넘었을 경우 연결을 종료
                                 clientOut.println("421 Too many failed login attempts, closing connection.");
                                 break;
                             }
+                            clientOut.println("535 Authentication failed. Remaining attempts: "+(5-login_cnt)); //로그인을 시도가능한 회수를 같이 전달
                             continue;
                         }
                     }else if(!login){//login이 처리되지 않고 다른 명령어가 수신된 경우
