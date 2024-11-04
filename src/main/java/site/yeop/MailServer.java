@@ -12,5 +12,9 @@ public class MailServer {
         // IMAP 서버 시작
         ImapServer imapServer = new ImapServer();
         new Thread(imapServer::start).start();
+
+        // FTP 서버 시작
+        FtpServer ftpServer = new FtpServer();
+        new Thread(ftpServer::start).start();
     }
 }
