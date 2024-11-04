@@ -12,11 +12,14 @@ public class SmtpSession implements Runnable {
     }
 
     public class IdPasswordManager{
-        private static final String IdPassword_FILE_PATH = "IdPassword.txt";//저장경로 수정 필요?
+        private static final String IdPassword_FILE_PATH = "C:/test/mail-server/IdPassword.txt";//저장경로 수정 필요?
 
         public boolean checkvalue(String encodedUserId, String encodedPassword) {
-            String userId = new String(Base64.getDecoder().decode(encodedUserId));
-            String password = new String(Base64.getDecoder().decode(encodedPassword));
+            //String userId = new String(Base64.getDecoder().decode(encodedUserId));
+            //String password = new String(Base64.getDecoder().decode(encodedPassword));
+
+            String userId = encodedUserId;
+            String password = encodedPassword;
 
             try(BufferedReader reader = new BufferedReader(new FileReader(IdPassword_FILE_PATH))){
                 String line;
@@ -82,6 +85,9 @@ public class SmtpSession implements Runnable {
                             clientOut.println("535 Authentication failed. Remaining attempts: "+(5-login_cnt)); //로그인을 시도가능한 회수를 같이 전달
                             continue;
                         }
+                    }else if(line.toUpperCase().equals("QUIT")){
+                        clientOut.println("221 Bye");
+                        break;
                     }else if(!login){//login이 처리되지 않고 다른 명령어가 수신된 경우
                         clientOut.println("530 Authentication required");
                         continue;
@@ -94,9 +100,6 @@ public class SmtpSession implements Runnable {
                     } else if (line.toUpperCase().equals("DATA")) {
                         clientOut.println("354 Start mail input; end with <CRLF>.<CRLF>");
                         inDataMode = true;
-                    } else if (line.toUpperCase().equals("QUIT")) {
-                        clientOut.println("221 Bye");
-                        break;
                     }
                 } else {
                     if (line.equals(".")) {
