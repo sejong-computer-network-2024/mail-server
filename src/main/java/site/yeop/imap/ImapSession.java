@@ -29,7 +29,7 @@ public class ImapSession implements Runnable {
             String tag = "";
 
             while ((line = in.readLine()) != null) {
-                System.out.println("[IMAP] 수신: " + line);
+                System.out.println("[IMAP(" + clientSocket.getInetAddress().getHostAddress() + ")] 수신: " + line);
                 String[] parts = line.split(" ");
                 if (parts.length < 2) continue;
 

@@ -27,7 +27,7 @@ public class SmtpSession implements Runnable {
             boolean inDataMode = false;
 
             while ((line = clientIn.readLine()) != null) {
-                System.out.println("클라이언트로부터 수신: " + line);
+                System.out.println("[SMTP(" + clientSocket.getInetAddress().getHostAddress() + ")] 수신: " + line);
 
                 if (!inDataMode) {
                     if (line.toUpperCase().startsWith("HELO") || line.toUpperCase().startsWith("EHLO")) {
