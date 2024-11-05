@@ -131,12 +131,13 @@ public class ImapSession implements Runnable {
 
             for (int i = start - 1; i < end; i++) {
                 MailInfo mail = mailList.get(i);
+                String content = reader.getMailContent(mail.getId());
                 String headerContent = "From: " + mail.getFrom() + "\r\n" +
                                        "Subject: " + mail.getSubject() + "\r\n" +
                                        "Date: " + mail.getDate() + "\r\n\r\n";
                 
-                out.println("* " + (i + 1) + " FETCH (BODY[HEADER.FIELDS (FROM SUBJECT DATE)] {" + (headerContent.length()) + "}");
-                out.println(headerContent);
+                out.println("* " + (i + 1) + " FETCH (BODY[HEADER.FIELDS (FROM SUBJECT DATE)] {" + (content.length()) + "}");
+                out.println(headerContent + ")");
             }
         } else {
             // 단일 요청
