@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.UUID;
 
 public class MailSender {
     private static final int SMTP_PORT = 25;

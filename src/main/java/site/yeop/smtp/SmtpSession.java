@@ -5,8 +5,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import site.yeop.auth.UserAuth;
-
 public class SmtpSession implements Runnable {
     private final Socket clientSocket;
 
@@ -27,7 +25,6 @@ public class SmtpSession implements Runnable {
             StringBuilder messageContent = new StringBuilder();
             String line;
             boolean inDataMode = false;
-            boolean authenticated = false;
 
             while ((line = clientIn.readLine()) != null) {
                 System.out.println("클라이언트로부터 수신: " + line);
@@ -35,41 +32,14 @@ public class SmtpSession implements Runnable {
                 if (!inDataMode) {
                     if (line.toUpperCase().startsWith("HELO") || line.toUpperCase().startsWith("EHLO")) {
                         clientOut.println("250 Hello");
-                    } else if (line.toUpperCase().startsWith("AUTH LOGIN")) {
-                        clientOut.println("334 UserId:");
-                        String encodeUsername = clientIn.readLine();
-                        clientOut.println("334 Password:");
-                        String encodePassword = clientIn.readLine();
-
-                        if (UserAuth.authenticate(encodeUsername, encodePassword)) {
-                            authenticated = true;
-                            clientOut.println("235 Authentication successful");
-                        } else {
-                            clientOut.println("535 Authentication failed");
-                        }
                     } else if (line.toUpperCase().startsWith("MAIL FROM:")) {
-                        if (!authenticated) {
-                            clientOut.println("535 Authentication required");
-                            continue;
-                        }
-
                         senderEmail = MailParser.extractEmail(line);
                         clientOut.println("250 Sender OK");
                     } else if (line.toUpperCase().startsWith("RCPT TO:")) {
-                        if (!authenticated) {
-                            clientOut.println("535 Authentication required");
-                            continue;
-                        }
-
                         String recipientEmail = MailParser.extractEmail(line);
                         recipientEmails.add(recipientEmail);
                         clientOut.println("250 Recipient OK");
                     } else if (line.toUpperCase().equals("DATA")) {
-                        if (!authenticated) {
-                            clientOut.println("535 Authentication required");
-                            continue;
-                        }
-
                         clientOut.println("354 Start mail input; end with <CRLF>.<CRLF>");
                         inDataMode = true;
                     } else if (line.toUpperCase().equals("QUIT")) {
