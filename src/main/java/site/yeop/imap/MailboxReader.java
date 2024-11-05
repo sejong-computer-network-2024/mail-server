@@ -43,11 +43,8 @@ public class MailboxReader {
             return mailList;
         }
 
-        System.out.println("발견된 메일 파일 수: " + files.length);
-
         for (File file : files) {
             try {
-                System.out.println("메일 파일 읽는 중: " + file.getName());
                 BufferedReader reader = new BufferedReader(new FileReader(file));
                 String from = "";
                 String subject = "";
@@ -62,14 +59,12 @@ public class MailboxReader {
                 reader.close();
                 
                 mailList.add(new MailInfo(file.getName(), from, subject, date));
-                System.out.println("메일 정보 추가됨: " + file.getName());
             } catch (IOException e) {
                 System.err.println("메일 읽기 오류 (" + file.getName() + "): " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
-        System.out.println("총 읽어온 메일 수: " + mailList.size());
         return mailList;
     }
 
