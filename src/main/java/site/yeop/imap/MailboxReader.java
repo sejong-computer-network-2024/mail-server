@@ -65,6 +65,8 @@ public class MailboxReader {
             }
         }
 
+        mailList.sort((a, b) -> a.getId().compareTo(b.getId()));
+
         return mailList;
     }
 
