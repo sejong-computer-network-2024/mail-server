@@ -2,6 +2,8 @@ package site.yeop.smtp;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 import site.yeop.auth.UserAuth;
 
@@ -21,7 +23,7 @@ public class SmtpSession implements Runnable {
             clientOut.println("220 yeop.site SMTP Server Ready");
 
             String senderEmail = null;
-            String recipientEmail = null;
+            List<String> recipientEmails = new ArrayList<>();
             StringBuilder messageContent = new StringBuilder();
             String line;
             boolean inDataMode = false;
@@ -59,7 +61,8 @@ public class SmtpSession implements Runnable {
                             continue;
                         }
 
-                        recipientEmail = MailParser.extractEmail(line);
+                        String recipientEmail = MailParser.extractEmail(line);
+                        recipientEmails.add(recipientEmail);
                         clientOut.println("250 Recipient OK");
                     } else if (line.toUpperCase().equals("DATA")) {
                         if (!authenticated) {
@@ -77,18 +80,23 @@ public class SmtpSession implements Runnable {
                     if (line.equals(".")) {
                         inDataMode = false;
                         String rawMessage = messageContent.toString();
-                        if (MailParser.isLocalDomain(recipientEmail)) {
-                            MailStorage.saveMailToFile(recipientEmail, senderEmail, rawMessage);
-                            clientOut.println("250 Message accepted for delivery");
-                        } else {
-                            String smtpServer = DnsResolver.getSmtpServer(recipientEmail);
-                            if (smtpServer != null) {
-                                boolean sent = MailSender.sendMail(smtpServer, senderEmail, recipientEmail, rawMessage);
-                                clientOut.println(sent ? "250 Message accepted for delivery" : "554 Transaction failed");
+                        for (String recipientEmail : recipientEmails) {
+                            if (MailParser.isLocalDomain(recipientEmail)) {
+                                MailStorage.saveMailToFile(recipientEmail, senderEmail, rawMessage);
+                                clientOut.println("250 Message accepted for delivery for " + recipientEmail);
                             } else {
-                                clientOut.println("554 No valid mail server found");
+                                String smtpServer = DnsResolver.getSmtpServer(recipientEmail);
+                                if (smtpServer != null) {
+                                    boolean sent = MailSender.sendMail(smtpServer, senderEmail, recipientEmail, rawMessage);
+                                    clientOut.println(sent ? 
+                                        "250 Message accepted for delivery for " + recipientEmail : 
+                                        "554 Transaction failed for " + recipientEmail);
+                                } else {
+                                    clientOut.println("554 No valid mail server found for " + recipientEmail);
+                                }
                             }
                         }
+                        recipientEmails.clear();
                         messageContent = new StringBuilder();
                     } else {
                         messageContent.append(line).append("\r\n");
