@@ -36,19 +36,19 @@ public class ImapSession implements Runnable {
                 String command = parts[1].toUpperCase();
 
                 switch (command) {
-                    case "LOGIN":
+                    case "LOGIN": 
                         handleLogin(tag, parts);
                         break;
-                    case "LIST":
-                        handleList(tag);
-                        break;
-                    case "SELECT":
+                    case "SELECT": 
                         handleSelect(tag, parts);
                         break;
-                    case "FETCH":
+                    case "FETCH": 
                         handleFetch(tag, parts);
                         break;
-                    case "LOGOUT":
+                    case "STORE":
+                        handleStore(tag, parts);
+                        break;
+                    case "LOGOUT": 
                         handleLogout(tag);
                         return;
                     default:
@@ -78,16 +78,6 @@ public class ImapSession implements Runnable {
             out.println(tag + " NO [AUTHENTICATIONFAILED] Invalid credentials");
             authenticated = false;
         }
-    }
-
-    private void handleList(String tag) {
-        if (!authenticated) {
-            out.println(tag + " NO Please authenticate first");
-            return;
-        }
-
-        out.println("* LIST (\\HasNoChildren) \"/\" \"INBOX\"");
-        out.println(tag + " OK LIST completed");
     }
 
     private void handleSelect(String tag, String[] parts) {
@@ -189,6 +179,35 @@ public class ImapSession implements Runnable {
     private void handleLogout(String tag) {
         out.println("* BYE IMAP server logging out");
         out.println(tag + " OK LOGOUT completed");
+    }
+
+    private void handleStore(String tag, String[] parts) {
+        if (!authenticated) {
+            out.println(tag + " NO Please authenticate first");
+            return;
+        }
+
+        if (parts.length < 4) {
+            out.println(tag + " BAD Invalid STORE command");
+            return;
+        }
+
+        String sequenceNumber = parts[2];
+        String flagSpec = String.join(" ", Arrays.copyOfRange(parts, 3, parts.length))
+                               .toUpperCase();
+
+        if (flagSpec.contains("FLAGS (\\DELETED)")) {
+            MailboxReader reader = new MailboxReader(username);
+            boolean success = reader.markMailAsDeleted(sequenceNumber);
+            if (success) {
+                out.println("* " + sequenceNumber + " FETCH (FLAGS (\\Deleted))");
+                out.println(tag + " OK STORE completed");
+            } else {
+                out.println(tag + " NO STORE failed");
+            }
+        } else {
+            out.println(tag + " BAD Unsupported flag");
+        }
     }
 
     private void closeConnection() {

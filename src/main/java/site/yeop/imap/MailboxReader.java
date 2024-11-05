@@ -3,6 +3,7 @@ package site.yeop.imap;
 import java.io.*;
 import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MailboxReader {
@@ -86,23 +87,39 @@ public class MailboxReader {
             return null;
         }
     }
-}
 
-class MailInfo {
-    private final String id;
-    private final String from;
-    private final String subject;
-    private final String date;
+    public boolean markMailAsDeleted(String sequenceNumber) {
+        try {
+            File mailboxDir = new File(userMailbox);
+            if (!mailboxDir.exists()) {
+                return false;
+            }
 
-    public MailInfo(String id, String from, String subject, String date) {
-        this.id = id;
-        this.from = from;
-        this.subject = subject;
-        this.date = date;
+            File[] files = mailboxDir.listFiles((dir, name) -> name.endsWith(".eml"));
+            if (files == null) {
+                return false;
+            }
+
+            Arrays.sort(files);
+            
+            try {
+                Integer.parseInt(sequenceNumber);
+            } catch (NumberFormatException e) {
+                System.out.println("올바르지 않은 시퀀스 번호: " + sequenceNumber);
+                return false;
+            }
+
+            int index = Integer.parseInt(sequenceNumber) - 1;
+            if (index >= 0 && index < files.length) {
+                File file = files[index];
+                File deletedFile = new File(file.getPath() + ".deleted");
+                return file.renameTo(deletedFile);
+            }
+            
+            return false;
+        } catch (Exception e) {
+            System.err.println("메일 삭제 표시 중 오류: " + e.getMessage());
+            return false;
+        }
     }
-
-    public String getId() { return id; }
-    public String getFrom() { return from; }
-    public String getSubject() { return subject; }
-    public String getDate() { return date; }
 }
