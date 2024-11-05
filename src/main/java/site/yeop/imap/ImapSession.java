@@ -37,6 +37,9 @@ public class ImapSession implements Runnable {
                 String command = parts[1].toUpperCase();
 
                 switch (command) {
+                    case "CAPABILITY":
+                        handleCapability(tag);
+                        break;
                     case "LOGIN": 
                         handleLogin(tag, parts);
                         break;
@@ -69,8 +72,8 @@ public class ImapSession implements Runnable {
             return;
         }
 
-        username = parts[2];
-        String password = parts[3];
+        username = parts[2].replace("\"", "");
+        String password = parts[3].replace("\"", "");
         
         if (UserAuth.authenticate(username, password)) {
             authenticated = true;
@@ -192,6 +195,12 @@ public class ImapSession implements Runnable {
         } else {
             out.println(tag + " BAD Unsupported flag");
         }
+    }
+
+    private void handleCapability(String tag) {
+        // 서버가 지원하는 기능들을 나열
+        out.println("* CAPABILITY IMAP4rev1 AUTH=PLAIN LOGIN SELECT FETCH STORE");
+        out.println(tag + " OK CAPABILITY completed");
     }
 
     private void closeConnection() {
