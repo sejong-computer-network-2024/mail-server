@@ -23,6 +23,8 @@ public class UserAuth {
             if (!userFile.exists()) {
                 try (PrintWriter writer = new PrintWriter(new FileWriter(userFile))) {
                     writer.println("admin@yeop.site:admin123"); // 기본 사용자
+                    writer.println("yeophs@yeop.site:1234"); // 기본 사용자
+                    writer.println("JS@yeop.site:1234"); // 기본 사용자
                 }
             }
             
