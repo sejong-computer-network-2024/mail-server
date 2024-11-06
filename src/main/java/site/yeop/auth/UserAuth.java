@@ -22,9 +22,13 @@ public class UserAuth {
             File userFile = new File(USER_FILE);
             if (!userFile.exists()) {
                 try (PrintWriter writer = new PrintWriter(new FileWriter(userFile))) {
-                    writer.println("admin@yeop.site:admin123"); // 기본 사용자
-                    writer.println("yeophs@yeop.site:1234"); // 기본 사용자
-                    writer.println("JS@yeop.site:1234"); // 기본 사용자
+                    writer.println("admin@yeop.site:admin123"); 
+                    writer.println("yeophs@yeop.site:1234"); 
+                    writer.println("JS@yeop.site:1234"); 
+                    writer.println("19011453@yeop.site:1234"); 
+                    writer.println("19011477@yeop.site:1234"); 
+                    writer.println("20011170@yeop.site:1234"); 
+                    writer.println("22011631@yeop.site:1234"); 
                 }
             }
             
