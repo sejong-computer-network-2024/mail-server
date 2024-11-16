@@ -10,9 +10,9 @@ SMTP와 IMAP 프로토콜을 구현한 간단한 메일 서버입니다.
 ## 빌드 방법
 
 ```bash
+(root 폴더에서)
 ./gradlew clean build
-# 빌드 후 실행(빌드파일이 있는 위치에서)
-java -jar mail-1.0.jar
+java -jar build/libs/mail-1.0.jar
 ```
 
 ## 서버 정보
